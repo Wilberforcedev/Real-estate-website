@@ -1,0 +1,110 @@
+@import "tailwindcss";
+
+@layer base {
+  body {
+    font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+    background-color: #FAF9F6;
+    color: #3E3C38;
+  }
+
+  h1, h2, h3, .font-serif {
+    font-family: 'Playfair Display', Georgia, serif;
+  }
+}
+
+/* Leaflet Custom Marker & Popup Styles - Natural Tones Theme */
+.leaflet-container {
+  font-family: 'Plus Jakarta Sans', sans-serif !important;
+  z-index: 1;
+  background-color: #F3F1ED !important;
+}
+
+.custom-price-pin {
+  background: transparent;
+  border: none;
+}
+
+.custom-price-pin .price-badge {
+  background: #5C6B4E;
+  color: #ffffff;
+  padding: 4px 10px;
+  border-radius: 9999px;
+  font-weight: 700;
+  font-size: 12px;
+  box-shadow: 0 4px 12px rgba(92, 107, 78, 0.25);
+  border: 2px solid #ffffff;
+  white-space: nowrap;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.custom-price-pin.selected .price-badge,
+.custom-price-pin:hover .price-badge {
+  background: #8A9A5B;
+  color: #ffffff;
+  transform: scale(1.15) translateY(-2px);
+  z-index: 999;
+  box-shadow: 0 8px 20px rgba(138, 154, 91, 0.4);
+  border-color: #ffffff;
+}
+
+.custom-price-pin.featured .price-badge {
+  border-color: #D98E73;
+}
+
+/* Custom leaflet popup overrides */
+.leaflet-popup-content-wrapper {
+  padding: 0 !important;
+  border-radius: 16px !important;
+  overflow: hidden !important;
+  box-shadow: 0 20px 25px -5px rgba(62, 60, 56, 0.12), 0 8px 10px -6px rgba(62, 60, 56, 0.08) !important;
+  border: 1px solid #E8E6E1 !important;
+  background: #FFFFFF !important;
+}
+
+.leaflet-popup-content {
+  margin: 0 !important;
+  line-height: 1.4 !important;
+}
+
+.leaflet-container a.leaflet-popup-close-button {
+  top: 8px !important;
+  right: 8px !important;
+  color: #ffffff !important;
+  background: rgba(62, 60, 56, 0.7) !important;
+  border-radius: 9999px !important;
+  width: 24px !important;
+  height: 24px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  font-size: 14px !important;
+  backdrop-filter: blur(4px);
+  z-index: 10;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.leaflet-container a.leaflet-popup-close-button:hover {
+  background: #3E3C38 !important;
+}
+
+/* Smooth custom scrollbars */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: #F3F1ED;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #D9CBB0;
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #8C8A85;
+}

@@ -1,0 +1,6 @@
+{
+  "name": "Real Estate Property Finder",
+  "description": "Interactive map-based real estate search platform with advanced property filters, detailed listing views, mortgage calculator, and integrated agent contact forms.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
