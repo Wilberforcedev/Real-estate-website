@@ -1,509 +1,451 @@
-import React, { useState, useMemo, useEffect } from 'react';
-import { Navbar } from './components/Navbar';
-import { FilterBar } from './components/FilterBar';
-import { PropertyMap } from './components/PropertyMap';
-import { ListingCard } from './components/ListingCard';
-import { PropertyDetailModal } from './components/PropertyDetailModal';
-import { SavedPropertiesDrawer } from './components/SavedPropertiesDrawer';
-import { ComparisonModal } from './components/ComparisonModal';
-import { ScheduledToursModal } from './components/ScheduledToursModal';
-import { AddListingModal } from './components/AddListingModal';
-import { SavedSearchesModal } from './components/SavedSearchesModal';
-import { MortgageCalculatorModal } from './components/MortgageCalculatorModal';
-import { Property, FilterState, TourBooking, AgentInquiry, SavedSearch } from './types';
-import { INITIAL_PROPERTIES } from './data/mockProperties';
-import { Sparkles, Building2, MapPin, CheckCircle2, AlertCircle } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { HeaderNavbar } from './components/HeaderNavbar';
+import { DashboardOverview } from './components/DashboardOverview';
+import { ResidentDirectory } from './components/ResidentDirectory';
+import { AdmissionsPipeline } from './components/AdmissionsPipeline';
+import { RoomManagement } from './components/RoomManagement';
+import { SwissBillingModule } from './components/SwissBillingModule';
+import { ShiftScheduler } from './components/ShiftScheduler';
+import { CareAiAssistantModal } from './components/CareAiAssistantModal';
+import { AddResidentModal } from './components/AddResidentModal';
+import { AddLeadModal } from './components/AddLeadModal';
 
-const INITIAL_FILTER_STATE: FilterState = {
-  searchQuery: '',
-  listingType: 'all',
-  propertyTypes: [],
-  minPrice: 0,
-  maxPrice: 10000000,
-  minBeds: 0,
-  minBaths: 0,
-  minSqFt: 0,
-  maxSqFt: 20000,
-  amenities: [],
-  sortBy: 'featured'
-};
+import { 
+  Resident, 
+  Room, 
+  Lead, 
+  CareLogEntry, 
+  MedicationItem, 
+  Invoice, 
+  StaffMember,
+  ShiftAssignment,
+  Language, 
+  SwissCanton, 
+  LeadStatus,
+  ThemeMode 
+} from './types';
+
+import { 
+  INITIAL_RESIDENTS, 
+  INITIAL_ROOMS, 
+  INITIAL_LEADS, 
+  INITIAL_CARE_LOGS, 
+  INITIAL_MEDICATIONS, 
+  INITIAL_INVOICES,
+  INITIAL_STAFF,
+  INITIAL_SHIFTS
+} from './data/mockData';
+
+import { CheckCircle2, AlertCircle, Moon, Sun, ShieldAlert, HeartPulse } from 'lucide-react';
 
 export default function App() {
-  // Persistence for custom properties & saved states
-  const [properties, setProperties] = useState<Property[]>(() => {
+  // Global App States
+  const [language, setLanguage] = useState<Language>('de');
+  const [theme, setTheme] = useState<ThemeMode>(() => {
     try {
-      const saved = localStorage.getItem('estatevue_properties');
-      return saved ? JSON.parse(saved) : INITIAL_PROPERTIES;
+      const saved = localStorage.getItem('sanocare_theme');
+      return (saved === 'night' || saved === 'light') ? saved : 'light';
     } catch {
-      return INITIAL_PROPERTIES;
+      return 'light';
+    }
+  });
+  const [selectedCanton, setSelectedCanton] = useState<string>('ALL');
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'residents' | 'leads' | 'rooms' | 'billing' | 'roster' | 'ai-assistant'>('dashboard');
+  const [searchQuery, setSearchQuery] = useState('');
+
+  // Persisted CRM Collections
+  const [residents, setResidents] = useState<Resident[]>(() => {
+    try {
+      const saved = localStorage.getItem('sanocare_residents');
+      return saved ? JSON.parse(saved) : INITIAL_RESIDENTS;
+    } catch {
+      return INITIAL_RESIDENTS;
     }
   });
 
-  const [savedPropertyIds, setSavedPropertyIds] = useState<string[]>(() => {
+  const [rooms, setRooms] = useState<Room[]>(() => {
     try {
-      const saved = localStorage.getItem('estatevue_saved_ids');
-      return saved ? JSON.parse(saved) : ['prop-1', 'prop-3'];
+      const saved = localStorage.getItem('sanocare_rooms');
+      return saved ? JSON.parse(saved) : INITIAL_ROOMS;
     } catch {
-      return ['prop-1', 'prop-3'];
+      return INITIAL_ROOMS;
     }
   });
 
-  const [tourBookings, setTourBookings] = useState<TourBooking[]>(() => {
+  const [leads, setLeads] = useState<Lead[]>(() => {
     try {
-      const saved = localStorage.getItem('estatevue_tour_bookings');
-      return saved ? JSON.parse(saved) : [];
+      const saved = localStorage.getItem('sanocare_leads');
+      return saved ? JSON.parse(saved) : INITIAL_LEADS;
     } catch {
-      return [];
+      return INITIAL_LEADS;
     }
   });
 
-  const [savedSearches, setSavedSearches] = useState<SavedSearch[]>(() => {
+  const [careLogs, setCareLogs] = useState<CareLogEntry[]>(() => {
     try {
-      const saved = localStorage.getItem('estatevue_saved_searches');
-      return saved ? JSON.parse(saved) : [
-        {
-          id: 'search-1',
-          name: 'San Francisco Luxury Condos & Villas',
-          filters: {
-            ...INITIAL_FILTER_STATE,
-            searchQuery: 'San Francisco',
-            listingType: 'sale',
-            propertyTypes: ['Condo', 'Luxury Villa'],
-            minPrice: 1500000,
-            maxPrice: 5000000
-          },
-          emailAlertsEnabled: true,
-          alertFrequency: 'daily',
-          userEmail: 'wilberofficial2001@gmail.com',
-          createdAt: '2026-08-01'
-        }
-      ];
+      const saved = localStorage.getItem('sanocare_care_logs');
+      return saved ? JSON.parse(saved) : INITIAL_CARE_LOGS;
     } catch {
-      return [];
+      return INITIAL_CARE_LOGS;
     }
   });
 
-  // Filter State & View Mode
-  const [filters, setFilters] = useState<FilterState>(INITIAL_FILTER_STATE);
-  const [viewMode, setViewMode] = useState<'split' | 'grid' | 'map'>('split');
-  
-  // Modals & Hover States
-  const [selectedProperty, setSelectedProperty] = useState<Property | null>(null);
-  const [detailModalProperty, setDetailModalProperty] = useState<Property | null>(null);
-  const [hoveredPropertyId, setHoveredPropertyId] = useState<string | null>(null);
-  
-  const [isSavedDrawerOpen, setIsSavedDrawerOpen] = useState(false);
-  const [isComparisonOpen, setIsComparisonOpen] = useState(false);
-  const [isToursModalOpen, setIsToursModalOpen] = useState(false);
-  const [isAddListingOpen, setIsAddListingOpen] = useState(false);
-  const [isSavedSearchesOpen, setIsSavedSearchesOpen] = useState(false);
-  const [isMortgageCalcOpen, setIsMortgageCalcOpen] = useState(false);
+  const [medications, setMedications] = useState<MedicationItem[]>(() => {
+    try {
+      const saved = localStorage.getItem('sanocare_medications');
+      return saved ? JSON.parse(saved) : INITIAL_MEDICATIONS;
+    } catch {
+      return INITIAL_MEDICATIONS;
+    }
+  });
 
-  // Toast Banner State
+  const [invoices, setInvoices] = useState<Invoice[]>(() => {
+    try {
+      const saved = localStorage.getItem('sanocare_invoices');
+      return saved ? JSON.parse(saved) : INITIAL_INVOICES;
+    } catch {
+      return INITIAL_INVOICES;
+    }
+  });
+
+  const [staffList, setStaffList] = useState<StaffMember[]>(() => {
+    try {
+      const saved = localStorage.getItem('sanocare_staff');
+      return saved ? JSON.parse(saved) : INITIAL_STAFF;
+    } catch {
+      return INITIAL_STAFF;
+    }
+  });
+
+  const [shifts, setShifts] = useState<ShiftAssignment[]>(() => {
+    try {
+      const saved = localStorage.getItem('sanocare_shifts');
+      return saved ? JSON.parse(saved) : INITIAL_SHIFTS;
+    } catch {
+      return INITIAL_SHIFTS;
+    }
+  });
+
+  // Modal Controls
+  const [isAiModalOpen, setIsAiModalOpen] = useState(false);
+  const [isAddResidentOpen, setIsAddResidentOpen] = useState(false);
+  const [isAddLeadOpen, setIsAddLeadOpen] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
-  // Sync to LocalStorage
+  // Sync to localStorage
   useEffect(() => {
-    localStorage.setItem('estatevue_properties', JSON.stringify(properties));
-  }, [properties]);
+    localStorage.setItem('sanocare_residents', JSON.stringify(residents));
+  }, [residents]);
 
   useEffect(() => {
-    localStorage.setItem('estatevue_saved_ids', JSON.stringify(savedPropertyIds));
-  }, [savedPropertyIds]);
+    localStorage.setItem('sanocare_rooms', JSON.stringify(rooms));
+  }, [rooms]);
 
   useEffect(() => {
-    localStorage.setItem('estatevue_tour_bookings', JSON.stringify(tourBookings));
-  }, [tourBookings]);
+    localStorage.setItem('sanocare_leads', JSON.stringify(leads));
+  }, [leads]);
 
   useEffect(() => {
-    localStorage.setItem('estatevue_saved_searches', JSON.stringify(savedSearches));
-  }, [savedSearches]);
+    localStorage.setItem('sanocare_care_logs', JSON.stringify(careLogs));
+  }, [careLogs]);
 
-  // Show Toast
+  useEffect(() => {
+    localStorage.setItem('sanocare_medications', JSON.stringify(medications));
+  }, [medications]);
+
+  useEffect(() => {
+    localStorage.setItem('sanocare_invoices', JSON.stringify(invoices));
+  }, [invoices]);
+
+  useEffect(() => {
+    localStorage.setItem('sanocare_staff', JSON.stringify(staffList));
+  }, [staffList]);
+
+  useEffect(() => {
+    localStorage.setItem('sanocare_shifts', JSON.stringify(shifts));
+  }, [shifts]);
+
+  useEffect(() => {
+    localStorage.setItem('sanocare_theme', theme);
+    if (theme === 'night') {
+      document.documentElement.classList.add('dark', 'night-mode');
+    } else {
+      document.documentElement.classList.remove('dark', 'night-mode');
+    }
+  }, [theme]);
+
   const showToast = (msg: string) => {
     setToastMessage(msg);
-    setTimeout(() => {
-      setToastMessage(null);
-    }, 4500);
+    setTimeout(() => setToastMessage(null), 4000);
   };
 
-  // Saved Search Handlers
-  const handleSaveSearch = (
-    name: string,
-    email: string,
-    enableAlerts: boolean,
-    frequency: 'instant' | 'daily' | 'weekly'
-  ) => {
-    const newSearch: SavedSearch = {
-      id: `search-${Date.now()}`,
-      name,
-      filters: { ...filters },
-      emailAlertsEnabled: enableAlerts,
-      alertFrequency: frequency,
-      userEmail: email,
-      createdAt: new Date().toISOString()
+  // Handlers
+  const handleAddResident = (newResident: Resident) => {
+    setResidents(prev => [newResident, ...prev]);
+    
+    // Also mark room occupied if applicable
+    setRooms(prev => prev.map(r => r.number === newResident.roomNumber ? { ...r, status: 'occupied', residentId: newResident.id } : r));
+
+    showToast(`Bewohner ${newResident.firstName} ${newResident.lastName} (Zimmer ${newResident.roomNumber}) erfolgreich erfasst! 🇨🇭`);
+  };
+
+  const handleAddLead = (newLead: Lead) => {
+    setLeads(prev => [newLead, ...prev]);
+    showToast(`Neue Pflegeanfrage für ${newLead.prospectFirstName} ${newLead.prospectLastName} in Pipeline aufgenommen! 📋`);
+  };
+
+  const handleUpdateLeadStatus = (leadId: string, newStatus: LeadStatus) => {
+    setLeads(prev => prev.map(l => l.id === leadId ? { ...l, currentStatus: newStatus } : l));
+    showToast(`Anfrage-Status auf Phase "${newStatus}" aktualisiert!`);
+  };
+
+  const handleConvertToResident = (lead: Lead) => {
+    const convertedResident: Resident = {
+      id: `res-${Date.now()}`,
+      firstName: lead.prospectFirstName,
+      lastName: lead.prospectLastName,
+      photoUrl: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&q=80&w=400',
+      birthDate: '1945-03-20',
+      gender: 'female',
+      ahvNumber: '756.8831.2001.99',
+      canton: lead.targetCanton,
+      besaLevel: lead.estimatedBesa,
+      careCategory: 'somatics',
+      status: 'active',
+      roomNumber: '108',
+      buildingWing: lead.targetWing,
+      entryDate: new Date().toISOString().split('T')[0],
+      insuranceCompany: 'Helsana KVG',
+      insurancePolicyNo: 'POL-771122',
+      primaryContact: {
+        name: lead.contactName,
+        relation: lead.relation,
+        phone: lead.contactPhone,
+        email: lead.contactEmail,
+        isLegalGuardian: true
+      },
+      doctor: {
+        name: 'Dr. med. Beat Keller',
+        praxis: 'Bellevue Praxis',
+        phone: '+41 44 251 10 20'
+      },
+      dietaryNeeds: ['Vollkost'],
+      allergies: [],
+      dailyCostCHF: 220,
+      cantonalSubsidyEligible: true,
+      notes: 'Anfrage erfolgreich in aktiven Bewohner umgewandelt.'
     };
-    setSavedSearches((prev) => [newSearch, ...prev]);
-    showToast(`Saved search "${name}" created! ${enableAlerts ? `Email alerts set to ${frequency}.` : ''} 🔔`);
+
+    setResidents(prev => [convertedResident, ...prev]);
+    setLeads(prev => prev.map(l => l.id === lead.id ? { ...l, currentStatus: 'admitted' } : l));
+    setActiveTab('residents');
+    showToast(`Anfrage ${lead.prospectFirstName} ${lead.prospectLastName} erfolgreich als aktiver Bewohner aufgenommen! 🎉`);
   };
 
-  const handleApplySavedSearch = (savedFilters: FilterState) => {
-    setFilters(savedFilters);
-    showToast(`Applied saved search criteria! 🔍`);
+  const handleAddCareLog = (log: Omit<CareLogEntry, 'id'>) => {
+    const newLog: CareLogEntry = {
+      id: `log-${Date.now()}`,
+      ...log
+    };
+    setCareLogs(prev => [newLog, ...prev]);
+    showToast('Pflegeeintrag im Journal gespeichert.');
   };
 
-  const handleDeleteSavedSearch = (id: string) => {
-    setSavedSearches((prev) => prev.filter((s) => s.id !== id));
-    showToast('Saved search deleted.');
+  const handleUpdateRoomStatus = (roomId: string, newStatus: Room['status']) => {
+    setRooms(prev => prev.map(r => r.id === roomId ? { ...r, status: newStatus } : r));
+    showToast('Zimmer-Status aktualisiert.');
   };
 
-  const handleToggleSavedSearchAlerts = (
-    id: string,
-    enabled: boolean,
-    frequency?: 'instant' | 'daily' | 'weekly'
-  ) => {
-    setSavedSearches((prev) =>
-      prev.map((s) =>
-        s.id === id
-          ? {
-              ...s,
-              emailAlertsEnabled: enabled,
-              ...(frequency ? { alertFrequency: frequency } : {})
-            }
-          : s
-      )
-    );
-    showToast(`Email alert status updated.`);
+  const handleUpdateInvoiceStatus = (invoiceId: string, status: Invoice['status']) => {
+    setInvoices(prev => prev.map(inv => inv.id === invoiceId ? { ...inv, status } : inv));
+    showToast(`Rechnung ${invoiceId} Status geändert auf: ${status}`);
   };
-
-  // Toggle Saved Heart
-  const handleToggleFavorite = (propertyId: string) => {
-    setSavedPropertyIds((prev) => {
-      const exists = prev.includes(propertyId);
-      const updated = exists ? prev.filter((id) => id !== propertyId) : [...prev, propertyId];
-      if (!exists) {
-        showToast('Property saved to your collection! ❤️');
-      }
-      return updated;
-    });
-  };
-
-  // Quick Schedule Tour handler from card
-  const handleQuickScheduleTour = (property: Property) => {
-    setDetailModalProperty(property);
-  };
-
-  // Submit Tour Booking
-  const handleScheduleTourSubmit = (booking: TourBooking) => {
-    setTourBookings((prev) => [booking, ...prev]);
-    showToast(`Tour requested with ${booking.agentName} for ${booking.date} at ${booking.timeSlot}! 📅`);
-  };
-
-  // Submit Agent Inquiry
-  const handleAgentInquirySubmit = (inquiry: AgentInquiry) => {
-    showToast(`Question sent to agent ${inquiry.agentName}! Check your email shortly. 📩`);
-  };
-
-  // Add Custom Property
-  const handleAddProperty = (newProp: Property) => {
-    setProperties((prev) => [newProp, ...prev]);
-    showToast(`Property "${newProp.title}" listed successfully! 🎉`);
-  };
-
-  // Cancel Tour
-  const handleCancelTour = (tourId: string) => {
-    setTourBookings((prev) => prev.filter((t) => t.id !== tourId));
-    showToast('Tour booking cancelled.');
-  };
-
-  // Filter & Sort Logic
-  const filteredProperties = useMemo(() => {
-    return properties.filter((prop) => {
-      // Listing Type filter (Sale / Rent)
-      if (filters.listingType !== 'all' && prop.listingType !== filters.listingType) {
-        return false;
-      }
-
-      // Search Query filter (Title, address, city, state, zip)
-      if (filters.searchQuery) {
-        const query = filters.searchQuery.toLowerCase();
-        const matchTitle = prop.title.toLowerCase().includes(query);
-        const matchAddress = prop.address.toLowerCase().includes(query);
-        const matchCity = prop.city.toLowerCase().includes(query);
-        const matchState = prop.state.toLowerCase().includes(query);
-        const matchZip = prop.zipCode.includes(query);
-        const matchType = prop.propertyType.toLowerCase().includes(query);
-
-        if (!matchTitle && !matchAddress && !matchCity && !matchState && !matchZip && !matchType) {
-          return false;
-        }
-      }
-
-      // Property Type
-      if (filters.propertyTypes.length > 0 && !filters.propertyTypes.includes(prop.propertyType)) {
-        return false;
-      }
-
-      // Price Range
-      if (prop.price < filters.minPrice || prop.price > filters.maxPrice) {
-        return false;
-      }
-
-      // Beds & Baths
-      if (prop.beds < filters.minBeds || prop.baths < filters.minBaths) {
-        return false;
-      }
-
-      // Sq Ft Range
-      if (prop.sqft < filters.minSqFt || prop.sqft > filters.maxSqFt) {
-        return false;
-      }
-
-      // Amenities (Must match all selected amenities)
-      if (filters.amenities.length > 0) {
-        const hasAllAmenities = filters.amenities.every((am) => prop.amenities.includes(am));
-        if (!hasAllAmenities) return false;
-      }
-
-      return true;
-    }).sort((a, b) => {
-      if (filters.sortBy === 'price-asc') return a.price - b.price;
-      if (filters.sortBy === 'price-desc') return b.price - a.price;
-      if (filters.sortBy === 'newest') return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
-      if (filters.sortBy === 'sqft-desc') return b.sqft - a.sqft;
-      // Featured first
-      return (b.isFeatured ? 1 : 0) - (a.isFeatured ? 1 : 0);
-    });
-  }, [properties, filters]);
-
-  const savedPropertiesList = useMemo(() => {
-    return properties.filter((p) => savedPropertyIds.includes(p.id));
-  }, [properties, savedPropertyIds]);
 
   return (
-    <div className="min-h-screen flex flex-col bg-[#FAF9F6] text-[#3E3C38] font-sans">
+    <div className={`min-h-screen font-sans flex flex-col antialiased transition-colors duration-300 ${
+      theme === 'night' 
+        ? 'bg-slate-950 text-slate-100 dark' 
+        : 'bg-slate-100/80 text-slate-900'
+    }`}>
       
-      {/* Toast Notification Banner */}
+      {/* Toast Banner */}
       {toastMessage && (
-        <div className="fixed top-20 right-4 z-50 bg-[#3E3C38] text-white px-4 py-3 rounded-2xl shadow-2xl border border-[#8A9A5B]/50 flex items-center gap-3 animate-in fade-in slide-in-from-top-4 duration-200 max-w-md">
-          <CheckCircle2 className="w-5 h-5 text-[#8A9A5B] shrink-0" />
-          <span className="text-xs font-bold">{toastMessage}</span>
+        <div className="fixed top-20 right-4 z-50 bg-slate-900 text-white text-xs font-bold px-4 py-3 rounded-2xl shadow-2xl border border-emerald-500/50 flex items-center gap-2.5 animate-in fade-in slide-in-from-top-4 duration-200">
+          <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+          <span>{toastMessage}</span>
         </div>
       )}
 
-      {/* Top Navbar */}
-      <Navbar
-        listingType={filters.listingType}
-        setListingType={(type) => setFilters((prev) => ({ ...prev, listingType: type }))}
-        savedCount={savedPropertyIds.length}
-        onOpenSavedDrawer={() => setIsSavedDrawerOpen(true)}
-        scheduledToursCount={tourBookings.length}
-        onOpenToursModal={() => setIsToursModalOpen(true)}
-        onOpenAddListingModal={() => setIsAddListingOpen(true)}
-        savedSearchesCount={savedSearches.length}
-        onOpenSavedSearchesModal={() => setIsSavedSearchesOpen(true)}
-        onOpenMortgageCalculatorModal={() => setIsMortgageCalcOpen(true)}
-        searchQuery={filters.searchQuery}
-        setSearchQuery={(q) => setFilters((prev) => ({ ...prev, searchQuery: q }))}
+      {/* Main Navigation Header */}
+      <HeaderNavbar
+        currentTab={activeTab}
+        setCurrentTab={setActiveTab}
+        selectedCantonFilter={selectedCanton}
+        setSelectedCantonFilter={setSelectedCanton}
+        language={language}
+        setLanguage={setLanguage}
+        theme={theme}
+        setTheme={setTheme}
+        searchQuery={searchQuery}
+        setSearchQuery={setSearchQuery}
+        onOpenAddResident={() => setIsAddResidentOpen(true)}
+        onOpenAddLead={() => setIsAddLeadOpen(true)}
+        onOpenAiAssistant={() => setIsAiModalOpen(true)}
       />
 
-      {/* Filter Bar */}
-      <FilterBar
-        filters={filters}
-        setFilters={setFilters}
-        totalResults={filteredProperties.length}
-        viewMode={viewMode}
-        setViewMode={setViewMode}
-        onResetFilters={() => setFilters(INITIAL_FILTER_STATE)}
-        onOpenSavedSearchesModal={() => setIsSavedSearchesOpen(true)}
-      />
+      {/* Night Shift Operational Banner */}
+      {theme === 'night' && (
+        <div className="bg-slate-900/90 border-b border-amber-500/40 text-amber-200 px-4 py-2.5 text-xs font-medium shadow-md">
+          <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
+            <div className="flex items-center gap-2.5">
+              <span className="relative flex h-2.5 w-2.5 shrink-0">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-amber-500"></span>
+              </span>
+              <Moon className="w-4 h-4 text-amber-300 shrink-0 fill-amber-300/20" />
+              <span className="font-bold text-amber-300">Nachtdienst-Modus Aktiv:</span>
+              <span className="text-slate-300">Augen-schonender High Contrast für dunkle Pflegestationen (22:00 - 06:00). Anti-Glare Interface.</span>
+            </div>
+            <div className="flex items-center gap-2 text-[11px] shrink-0">
+              <span className="bg-amber-500/20 text-amber-300 font-mono px-2 py-0.5 rounded-lg border border-amber-500/30 flex items-center gap-1">
+                <HeartPulse className="w-3 h-3 text-emerald-400" />
+                Nachtwache: 1 HF / 2 FaGe
+              </span>
+            </div>
+          </div>
+        </div>
+      )}
 
-      {/* Main Container View Area */}
-      <main className="flex-1 flex flex-col relative overflow-hidden">
+      {/* Main Content Area */}
+      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6">
         
-        {/* VIEW MODE 1: SPLIT MAP + LIST VIEW */}
-        {viewMode === 'split' && (
-          <div className="flex-1 grid grid-cols-1 lg:grid-cols-12 min-h-[calc(100vh-8rem)]">
-            
-            {/* Left 50%: Listings Grid Column (6 cols on lg) */}
-            <div className="lg:col-span-6 p-4 sm:p-6 overflow-y-auto space-y-4 max-h-[calc(100vh-8rem)]">
-              
-              {/* Active Filter summary */}
-              <div className="flex items-center justify-between">
-                <h2 className="font-serif font-bold text-lg text-[#3E3C38] flex items-center gap-2">
-                  <span>Listings for {filters.listingType === 'sale' ? 'Sale' : filters.listingType === 'rent' ? 'Rent' : 'Sale & Rent'}</span>
-                  <span className="text-xs font-sans font-normal text-[#3E3C38] bg-[#E8E6E1] px-2.5 py-0.5 rounded-full">
-                    {filteredProperties.length} results
-                  </span>
-                </h2>
-              </div>
-
-              {filteredProperties.length === 0 ? (
-                <div className="bg-[#F3F1ED] rounded-3xl p-10 text-center border border-[#E8E6E1] space-y-3 my-8">
-                  <Building2 className="w-12 h-12 text-[#8C8A85] mx-auto" />
-                  <h3 className="font-serif font-bold text-base text-[#3E3C38]">No properties found</h3>
-                  <p className="text-xs text-[#8C8A85] max-w-sm mx-auto">
-                    Try broadening your search criteria or resetting filters to see more results.
-                  </p>
-                  <button
-                    onClick={() => setFilters(INITIAL_FILTER_STATE)}
-                    className="mt-2 bg-[#5C6B4E] hover:bg-[#4A573F] text-white text-xs font-bold px-4 py-2 rounded-xl transition-all"
-                  >
-                    Reset All Filters
-                  </button>
-                </div>
-              ) : (
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  {filteredProperties.map((property) => (
-                    <ListingCard
-                      key={property.id}
-                      property={property}
-                      isFavorite={savedPropertyIds.includes(property.id)}
-                      onToggleFavorite={handleToggleFavorite}
-                      onSelectProperty={setSelectedProperty}
-                      onOpenDetailModal={setDetailModalProperty}
-                      onQuickScheduleTour={handleQuickScheduleTour}
-                      isHovered={hoveredPropertyId === property.id}
-                      onHover={setHoveredPropertyId}
-                    />
-                  ))}
-                </div>
-              )}
-
-            </div>
-
-            {/* Right 50%: Sticky Interactive Leaflet Map Column (6 cols on lg) */}
-            <div className="lg:col-span-6 p-4 lg:pl-0 h-[500px] lg:h-auto sticky top-32">
-              <PropertyMap
-                properties={filteredProperties}
-                selectedProperty={selectedProperty}
-                onSelectProperty={setSelectedProperty}
-                hoveredPropertyId={hoveredPropertyId}
-                onHoverProperty={setHoveredPropertyId}
-                onOpenDetailModal={setDetailModalProperty}
-              />
-            </div>
-
-          </div>
+        {/* TAB 1: DASHBOARD */}
+        {activeTab === 'dashboard' && (
+          <DashboardOverview
+            residents={residents}
+            rooms={rooms}
+            leads={leads}
+            careLogs={careLogs}
+            medications={medications}
+            language={language}
+            theme={theme}
+            onNavigateTab={setActiveTab}
+            onSelectResident={(res) => {
+              setSearchQuery(res.lastName);
+              setActiveTab('residents');
+            }}
+            onOpenAiAssistant={() => setIsAiModalOpen(true)}
+            onAddCareLog={handleAddCareLog}
+          />
         )}
 
-        {/* VIEW MODE 2: FULL GRID VIEW */}
-        {viewMode === 'grid' && (
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 w-full">
-            <div className="flex items-center justify-between mb-6">
-              <div>
-                <h2 className="font-serif font-bold text-2xl text-[#3E3C38]">Explore Properties</h2>
-                <p className="text-xs text-[#8C8A85]">Showing {filteredProperties.length} properties matching your criteria</p>
-              </div>
-            </div>
-
-            {filteredProperties.length === 0 ? (
-              <div className="bg-[#F3F1ED] rounded-3xl p-12 text-center border border-[#E8E6E1] max-w-md mx-auto space-y-3 my-12">
-                <Building2 className="w-12 h-12 text-[#8C8A85] mx-auto" />
-                <h3 className="font-serif font-bold text-base text-[#3E3C38]">No properties found</h3>
-                <button
-                  onClick={() => setFilters(INITIAL_FILTER_STATE)}
-                  className="bg-[#5C6B4E] hover:bg-[#4A573F] text-white text-xs font-bold px-4 py-2 rounded-xl"
-                >
-                  Reset Filters
-                </button>
-              </div>
-            ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                {filteredProperties.map((property) => (
-                  <ListingCard
-                    key={property.id}
-                    property={property}
-                    isFavorite={savedPropertyIds.includes(property.id)}
-                    onToggleFavorite={handleToggleFavorite}
-                    onSelectProperty={setSelectedProperty}
-                    onOpenDetailModal={setDetailModalProperty}
-                    onQuickScheduleTour={handleQuickScheduleTour}
-                  />
-                ))}
-              </div>
-            )}
-          </div>
+        {/* TAB 2: RESIDENTS DIRECTORY */}
+        {activeTab === 'residents' && (
+          <ResidentDirectory
+            residents={residents}
+            careLogs={careLogs}
+            medications={medications}
+            searchQuery={searchQuery}
+            setSearchQuery={setSearchQuery}
+            selectedCantonFilter={selectedCanton}
+            language={language}
+            theme={theme}
+            onOpenAddResident={() => setIsAddResidentOpen(true)}
+            onAddCareLog={handleAddCareLog}
+            onOpenAiAssistant={() => setIsAiModalOpen(true)}
+          />
         )}
 
-        {/* VIEW MODE 3: FULL MAP VIEW */}
-        {viewMode === 'map' && (
-          <div className="w-full h-[calc(100vh-8rem)] p-4">
-            <PropertyMap
-              properties={filteredProperties}
-              selectedProperty={selectedProperty}
-              onSelectProperty={setSelectedProperty}
-              hoveredPropertyId={hoveredPropertyId}
-              onHoverProperty={setHoveredPropertyId}
-              onOpenDetailModal={setDetailModalProperty}
-            />
-          </div>
+        {/* TAB 3: ADMISSIONS PIPELINE (LEADS) */}
+        {activeTab === 'leads' && (
+          <AdmissionsPipeline
+            leads={leads}
+            language={language}
+            theme={theme}
+            onOpenAddLead={() => setIsAddLeadOpen(true)}
+            onUpdateLeadStatus={handleUpdateLeadStatus}
+            onConvertToResident={handleConvertToResident}
+          />
+        )}
+
+        {/* TAB 4: ROOM MANAGEMENT */}
+        {activeTab === 'rooms' && (
+          <RoomManagement
+            rooms={rooms}
+            residents={residents}
+            language={language}
+            theme={theme}
+            onUpdateRoomStatus={handleUpdateRoomStatus}
+          />
+        )}
+
+        {/* TAB 5: BILLING & QR-RECHNUNG */}
+        {activeTab === 'billing' && (
+          <SwissBillingModule
+            invoices={invoices}
+            residents={residents}
+            language={language}
+            theme={theme}
+            onUpdateInvoiceStatus={handleUpdateInvoiceStatus}
+          />
+        )}
+
+        {/* TAB 6: SHIFT SCHEDULER & ROSTER */}
+        {activeTab === 'roster' && (
+          <ShiftScheduler
+            staffList={staffList}
+            shifts={shifts}
+            language={language}
+            theme={theme}
+            onUpdateShifts={(newShifts) => {
+              setShifts(newShifts);
+              showToast('Dienstplan-Änderungen erfolgreich gespeichert! 📅');
+            }}
+            onAddStaffMember={(newStaff) => {
+              setStaffList(prev => [...prev, newStaff]);
+              showToast(`Pflegekraft ${newStaff.name} (${newStaff.qualification}) registriert! 👩‍⚕️`);
+            }}
+          />
         )}
 
       </main>
 
-      {/* Property Detail Modal */}
-      {detailModalProperty && (
-        <PropertyDetailModal
-          property={detailModalProperty}
-          onClose={() => setDetailModalProperty(null)}
-          isFavorite={savedPropertyIds.includes(detailModalProperty.id)}
-          onToggleFavorite={handleToggleFavorite}
-          onScheduleTourSubmit={handleScheduleTourSubmit}
-          onAgentInquirySubmit={handleAgentInquirySubmit}
-        />
-      )}
+      {/* FOOTER */}
+      <footer className="bg-white border-t border-slate-200 py-6 text-center text-xs text-slate-500">
+        <div className="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-3">
+          <div className="flex items-center gap-2 font-serif font-bold text-slate-800">
+            <span className="bg-red-600 text-white text-[10px] px-1.5 py-0.2 rounded font-black">🇨🇭</span>
+            SanoCare Schweiz CRM • Alters- & Pflegeheim Software
+          </div>
+          <p className="text-[11px] text-slate-400">
+            Konform mit KVG (KVB), BESA 5.0 / RAI-NH, CURAVIVA Standards & Schweizer DSG.
+          </p>
+        </div>
+      </footer>
 
-      {/* Saved Properties Drawer */}
-      <SavedPropertiesDrawer
-        isOpen={isSavedDrawerOpen}
-        onClose={() => setIsSavedDrawerOpen(false)}
-        savedProperties={savedPropertiesList}
-        onRemoveSaved={handleToggleFavorite}
-        onOpenDetailModal={setDetailModalProperty}
-        onOpenComparisonModal={() => setIsComparisonOpen(true)}
+      {/* MODALS */}
+      <CareAiAssistantModal
+        isOpen={isAiModalOpen || activeTab === 'ai-assistant'}
+        onClose={() => {
+          setIsAiModalOpen(false);
+          if (activeTab === 'ai-assistant') setActiveTab('dashboard');
+        }}
+        residents={residents}
+        language={language}
       />
 
-      {/* Comparison Modal */}
-      <ComparisonModal
-        isOpen={isComparisonOpen}
-        onClose={() => setIsComparisonOpen(false)}
-        savedProperties={savedPropertiesList}
-        onOpenDetailModal={setDetailModalProperty}
+      <AddResidentModal
+        isOpen={isAddResidentOpen}
+        onClose={() => setIsAddResidentOpen(false)}
+        onAddResident={handleAddResident}
+        language={language}
       />
 
-      {/* Scheduled Tours Modal */}
-      <ScheduledToursModal
-        isOpen={isToursModalOpen}
-        onClose={() => setIsToursModalOpen(false)}
-        tourBookings={tourBookings}
-        onCancelTour={handleCancelTour}
-      />
-
-      {/* Add Custom Listing Modal */}
-      <AddListingModal
-        isOpen={isAddListingOpen}
-        onClose={() => setIsAddListingOpen(false)}
-        onAddProperty={handleAddProperty}
-      />
-
-      {/* Saved Searches & Email Alerts Modal */}
-      <SavedSearchesModal
-        isOpen={isSavedSearchesOpen}
-        onClose={() => setIsSavedSearchesOpen(false)}
-        savedSearches={savedSearches}
-        onSaveSearch={handleSaveSearch}
-        onApplySearch={handleApplySavedSearch}
-        onDeleteSearch={handleDeleteSavedSearch}
-        onToggleAlerts={handleToggleSavedSearchAlerts}
-        currentFilters={filters}
-      />
-
-      {/* Standalone Mortgage Calculator Tool */}
-      <MortgageCalculatorModal
-        isOpen={isMortgageCalcOpen}
-        onClose={() => setIsMortgageCalcOpen(false)}
-        initialPrice={detailModalProperty ? detailModalProperty.price : 1250000}
+      <AddLeadModal
+        isOpen={isAddLeadOpen}
+        onClose={() => setIsAddLeadOpen(false)}
+        onAddLead={handleAddLead}
+        language={language}
       />
 
     </div>

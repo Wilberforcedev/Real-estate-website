@@ -164,6 +164,89 @@ Answer user questions accurately, politely, and concisely based on these propert
     }
   });
 
+  // API Route: Swiss Care Home AI Assistant (Pflegeberichte, BESA-Analysen, Übersetzung)
+  app.post("/api/care-ai", async (req, res) => {
+    try {
+      const { type, payload, language = 'de' } = req.body;
+
+      const apiKey = process.env.GEMINI_API_KEY;
+      if (!apiKey) {
+        return res.status(500).json({ 
+          error: "GEMINI_API_KEY environment variable is not configured." 
+        });
+      }
+
+      const ai = new GoogleGenAI({
+        apiKey,
+        httpOptions: {
+          headers: {
+            'User-Agent': 'aistudio-build',
+          }
+        }
+      });
+
+      let systemPrompt = `You are an expert Swiss Eldercare AI Assistant (Alters- und Pflegeheim KI-Assistent) specialized in Swiss nursing standards (KVB/OKP), BESA/RAI care classification levels (Stufe 1-12), and Swiss cantonal health administration. Respond in clear, professional language (${language.toUpperCase()}).`;
+
+      let userPrompt = "";
+
+      if (type === 'generate_care_report') {
+        userPrompt = `Generate a professional, KVB-compliant Swiss nursing report (Pflegebericht) based on the following care observations for resident ${payload.residentName} (BESA Level ${payload.besaLevel}):
+Observations: "${payload.notes}"
+Category: ${payload.category}
+Staff Member: ${payload.staffName} (${payload.staffRole})
+
+Include:
+1. Subjective & Objective summary (SOAP format if applicable)
+2. Immediate interventions taken
+3. Nursing recommendations & follow-up items
+Format with crisp markdown.`;
+      } else if (type === 'besa_assessment') {
+        userPrompt = `Perform a Swiss BESA Care Level Assessment (BESA-Stufen-Einschätzung 1 bis 12) based on the resident's condition:
+Resident: ${payload.residentName}, Age: ${payload.age}, Category: ${payload.careCategory}
+Condition & Mobility: "${payload.mobilityCondition}"
+Cognitive / Dementia status: "${payload.cognitiveStatus}"
+Hygiene & Dressing support needed: "${payload.hygieneSupport}"
+Nutrition support needed: "${payload.nutritionSupport}"
+
+Please evaluate:
+- Estimated Nursing Care Minutes per Day (Pflegeaufwand in Minuten/Tag)
+- Recommended BESA Level (Stufe 1 to 12)
+- Justification based on Swiss KVG cantonal tariff guidelines
+- Suggested care focus areas for the individual care plan.`;
+      } else if (type === 'translate_swiss_languages') {
+        userPrompt = `Translate the following text into ${payload.targetLang}:
+Text: "${payload.text}"
+Context: Swiss Care Home / Alterszentrum communication with family, medical staff, or canton. Maintain professional tone.`;
+      } else {
+        userPrompt = `Answer the following Swiss care home inquiry accurately and concisely:
+Inquiry: "${payload.query}"
+Resident Context (if any): ${JSON.stringify(payload.residentContext || {})}
+Provide clean markdown output formatted for Swiss eldercare administrators and nursing staff.`;
+      }
+
+      const response = await ai.models.generateContent({
+        model: "gemini-3.6-flash",
+        contents: userPrompt,
+        config: {
+          systemInstruction: systemPrompt,
+        },
+      });
+
+      const replyText = response.text || "No response generated.";
+
+      return res.json({
+        success: true,
+        result: replyText,
+      });
+    } catch (error: any) {
+      console.error("Error in care AI endpoint:", error);
+      return res.status(500).json({
+        error: "Failed to generate Care AI response.",
+        details: error?.message || String(error),
+      });
+    }
+  });
+
   // Vite middleware for development vs static serve for production
   if (process.env.NODE_ENV !== "production") {
     const vite = await createViteServer({
