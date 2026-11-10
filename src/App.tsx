@@ -28,60 +28,61 @@ const INITIAL_FILTER_STATE: FilterState = {
   sortBy: 'featured'
 };
 
+const DEFAULT_SAVED_SEARCHES: SavedSearch[] = [
+  {
+    id: 'search-1',
+    name: 'San Francisco Luxury Condos & Villas',
+    filters: {
+      ...INITIAL_FILTER_STATE,
+      searchQuery: 'San Francisco',
+      listingType: 'sale',
+      propertyTypes: ['Condo', 'Luxury Villa'],
+      minPrice: 1500000,
+      maxPrice: 5000000
+    },
+    emailAlertsEnabled: true,
+    alertFrequency: 'daily',
+    userEmail: '',
+    createdAt: '2026-08-01'
+  }
+];
+
+function readStoredArray<T>(key: string, fallback: T[]): T[] {
+  try {
+    const saved = localStorage.getItem(key);
+    if (!saved) return fallback;
+    const parsed = JSON.parse(saved);
+    return Array.isArray(parsed) ? (parsed as T[]) : fallback;
+  } catch {
+    return fallback;
+  }
+}
+
+function persist(key: string, value: unknown) {
+  try {
+    localStorage.setItem(key, JSON.stringify(value));
+  } catch {
+    // Storage can be unavailable (private mode, quota); the app keeps working in memory.
+  }
+}
+
 export default function App() {
   // Persistence for custom properties & saved states
-  const [properties, setProperties] = useState<Property[]>(() => {
-    try {
-      const saved = localStorage.getItem('estatevue_properties');
-      return saved ? JSON.parse(saved) : INITIAL_PROPERTIES;
-    } catch {
-      return INITIAL_PROPERTIES;
-    }
-  });
+  const [properties, setProperties] = useState<Property[]>(() =>
+    readStoredArray<Property>('estatevue_properties', INITIAL_PROPERTIES)
+  );
 
-  const [savedPropertyIds, setSavedPropertyIds] = useState<string[]>(() => {
-    try {
-      const saved = localStorage.getItem('estatevue_saved_ids');
-      return saved ? JSON.parse(saved) : ['prop-1', 'prop-3'];
-    } catch {
-      return ['prop-1', 'prop-3'];
-    }
-  });
+  const [savedPropertyIds, setSavedPropertyIds] = useState<string[]>(() =>
+    readStoredArray<string>('estatevue_saved_ids', ['prop-1', 'prop-3'])
+  );
 
-  const [tourBookings, setTourBookings] = useState<TourBooking[]>(() => {
-    try {
-      const saved = localStorage.getItem('estatevue_tour_bookings');
-      return saved ? JSON.parse(saved) : [];
-    } catch {
-      return [];
-    }
-  });
+  const [tourBookings, setTourBookings] = useState<TourBooking[]>(() =>
+    readStoredArray<TourBooking>('estatevue_tour_bookings', [])
+  );
 
-  const [savedSearches, setSavedSearches] = useState<SavedSearch[]>(() => {
-    try {
-      const saved = localStorage.getItem('estatevue_saved_searches');
-      return saved ? JSON.parse(saved) : [
-        {
-          id: 'search-1',
-          name: 'San Francisco Luxury Condos & Villas',
-          filters: {
-            ...INITIAL_FILTER_STATE,
-            searchQuery: 'San Francisco',
-            listingType: 'sale',
-            propertyTypes: ['Condo', 'Luxury Villa'],
-            minPrice: 1500000,
-            maxPrice: 5000000
-          },
-          emailAlertsEnabled: true,
-          alertFrequency: 'daily',
-          userEmail: 'wilberofficial2001@gmail.com',
-          createdAt: '2026-08-01'
-        }
-      ];
-    } catch {
-      return [];
-    }
-  });
+  const [savedSearches, setSavedSearches] = useState<SavedSearch[]>(() =>
+    readStoredArray<SavedSearch>('estatevue_saved_searches', DEFAULT_SAVED_SEARCHES)
+  );
 
   // Filter State & View Mode
   const [filters, setFilters] = useState<FilterState>(INITIAL_FILTER_STATE);
@@ -104,19 +105,19 @@ export default function App() {
 
   // Sync to LocalStorage
   useEffect(() => {
-    localStorage.setItem('estatevue_properties', JSON.stringify(properties));
+    persist('estatevue_properties', properties);
   }, [properties]);
 
   useEffect(() => {
-    localStorage.setItem('estatevue_saved_ids', JSON.stringify(savedPropertyIds));
+    persist('estatevue_saved_ids', savedPropertyIds);
   }, [savedPropertyIds]);
 
   useEffect(() => {
-    localStorage.setItem('estatevue_tour_bookings', JSON.stringify(tourBookings));
+    persist('estatevue_tour_bookings', tourBookings);
   }, [tourBookings]);
 
   useEffect(() => {
-    localStorage.setItem('estatevue_saved_searches', JSON.stringify(savedSearches));
+    persist('estatevue_saved_searches', savedSearches);
   }, [savedSearches]);
 
   // Show Toast

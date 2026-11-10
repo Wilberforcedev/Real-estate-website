@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { 
   X, 
   Heart, 
@@ -43,6 +43,42 @@ interface PropertyDetailModalProps {
   onAgentInquirySubmit: (inquiry: AgentInquiry) => void;
 }
 
+interface LocalInsights {
+  insightText: string;
+  sources: Array<{ title: string; uri: string }>;
+}
+
+const INSIGHTS_CACHE_TTL_MS = 24 * 60 * 60 * 1000;
+const INSIGHTS_TIMEOUT_MS = 45000;
+
+function insightsCacheKey(propertyId: string) {
+  return `estatevue_insights_${propertyId}`;
+}
+
+function readCachedInsights(propertyId: string): LocalInsights | null {
+  try {
+    const raw = sessionStorage.getItem(insightsCacheKey(propertyId));
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    if (!parsed || typeof parsed.insightText !== 'string') return null;
+    if (typeof parsed.savedAt !== 'number' || Date.now() - parsed.savedAt > INSIGHTS_CACHE_TTL_MS) return null;
+    return {
+      insightText: parsed.insightText,
+      sources: Array.isArray(parsed.sources) ? parsed.sources : []
+    };
+  } catch {
+    return null;
+  }
+}
+
+function writeCachedInsights(propertyId: string, insights: LocalInsights) {
+  try {
+    sessionStorage.setItem(insightsCacheKey(propertyId), JSON.stringify({ ...insights, savedAt: Date.now() }));
+  } catch {
+    // Caching is best-effort; private mode may reject storage writes.
+  }
+}
+
 export const PropertyDetailModal: React.FC<PropertyDetailModalProps> = ({
   property,
   onClose,
@@ -55,12 +91,32 @@ export const PropertyDetailModal: React.FC<PropertyDetailModalProps> = ({
   const [activeFormTab, setActiveFormTab] = useState<'tour' | 'question' | 'offer'>('tour');
 
   // Google Search Grounded Local Area Insights State
-  const [localInsights, setLocalInsights] = useState<{ insightText: string; sources: Array<{ title: string; uri: string }> } | null>(null);
+  const [localInsights, setLocalInsights] = useState<LocalInsights | null>(null);
   const [loadingInsights, setLoadingInsights] = useState(false);
   const [insightsError, setInsightsError] = useState<string | null>(null);
+  const insightsRequestRef = useRef<AbortController | null>(null);
 
-  const fetchLocalInsights = async () => {
-    if (loadingInsights) return;
+  const fetchLocalInsights = async (forceRefresh = false) => {
+    if (insightsRequestRef.current) return;
+
+    if (!forceRefresh) {
+      const cached = readCachedInsights(property.id);
+      if (cached) {
+        setLocalInsights(cached);
+        setInsightsError(null);
+        setLoadingInsights(false);
+        return;
+      }
+    }
+
+    const controller = new AbortController();
+    insightsRequestRef.current = controller;
+    let timedOut = false;
+    const timeout = setTimeout(() => {
+      timedOut = true;
+      controller.abort();
+    }, INSIGHTS_TIMEOUT_MS);
+
     setLoadingInsights(true);
     setInsightsError(null);
 
@@ -68,6 +124,7 @@ export const PropertyDetailModal: React.FC<PropertyDetailModalProps> = ({
       const res = await fetch('/api/local-insights', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        signal: controller.signal,
         body: JSON.stringify({
           address: property.address,
           title: property.title,
@@ -76,19 +133,30 @@ export const PropertyDetailModal: React.FC<PropertyDetailModalProps> = ({
         })
       });
 
-      const data = await res.json();
-      if (res.ok && data.success) {
-        setLocalInsights({
+      const data = await res.json().catch(() => null);
+      if (res.ok && data?.success) {
+        const insights: LocalInsights = {
           insightText: data.insightText,
-          sources: data.sources || []
-        });
+          sources: Array.isArray(data.sources) ? data.sources : []
+        };
+        setLocalInsights(insights);
+        writeCachedInsights(property.id, insights);
       } else {
-        setInsightsError(data.error || 'Unable to fetch Google Search insights for this location.');
+        setInsightsError(data?.error || 'Unable to fetch local area insights for this location.');
       }
-    } catch (err: any) {
-      setInsightsError('Could not connect to local search service.');
+    } catch (err) {
+      if (controller.signal.aborted && !timedOut) return;
+      setInsightsError(
+        timedOut
+          ? 'The insights request timed out. Please try again.'
+          : 'Could not connect to the local insights service.'
+      );
     } finally {
-      setLoadingInsights(false);
+      clearTimeout(timeout);
+      if (insightsRequestRef.current === controller) {
+        insightsRequestRef.current = null;
+        setLoadingInsights(false);
+      }
     }
   };
 
@@ -97,6 +165,15 @@ export const PropertyDetailModal: React.FC<PropertyDetailModalProps> = ({
     setLocalInsights(null);
     setInsightsError(null);
     fetchLocalInsights();
+
+    return () => {
+      const inFlight = insightsRequestRef.current;
+      if (inFlight) {
+        insightsRequestRef.current = null;
+        inFlight.abort();
+      }
+      setLoadingInsights(false);
+    };
   }, [property.id]);
 
   // Tour Form State
@@ -602,7 +679,7 @@ export const PropertyDetailModal: React.FC<PropertyDetailModalProps> = ({
                       </div>
 
                       <button
-                        onClick={fetchLocalInsights}
+                        onClick={() => fetchLocalInsights(true)}
                         disabled={loadingInsights}
                         className="p-1.5 rounded-xl bg-[#F3F1ED] hover:bg-[#E8E6E1] text-[#3E3C38] transition-all flex items-center gap-1 text-xs font-bold"
                         title="Refresh Search Insights"
@@ -621,7 +698,7 @@ export const PropertyDetailModal: React.FC<PropertyDetailModalProps> = ({
                     ) : insightsError ? (
                       <div className="p-4 bg-red-50 border border-red-200 rounded-xl text-xs text-red-700 flex justify-between items-center">
                         <span>{insightsError}</span>
-                        <button onClick={fetchLocalInsights} className="underline font-bold ml-2">Retry</button>
+                        <button onClick={() => fetchLocalInsights(true)} className="underline font-bold ml-2">Retry</button>
                       </div>
                     ) : localInsights ? (
                       <div className="space-y-4 text-xs text-[#3E3C38] leading-relaxed">

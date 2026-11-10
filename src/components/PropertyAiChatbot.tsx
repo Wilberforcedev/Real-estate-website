@@ -74,10 +74,14 @@ export const PropertyAiChatbot: React.FC<PropertyAiChatbotProps> = ({
     if (!textToSend) setInput('');
     setLoading(true);
 
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 45000);
+
     try {
       const res = await fetch('/api/property-chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        signal: controller.signal,
         body: JSON.stringify({
           property,
           message: query,
@@ -85,8 +89,8 @@ export const PropertyAiChatbot: React.FC<PropertyAiChatbotProps> = ({
         })
       });
 
-      const data = await res.json();
-      if (res.ok && data.success) {
+      const data = await res.json().catch(() => null);
+      if (res.ok && data?.success) {
         const aiMsg: Message = {
           id: `ai-${Date.now()}`,
           sender: 'ai',
@@ -98,7 +102,7 @@ export const PropertyAiChatbot: React.FC<PropertyAiChatbotProps> = ({
         const errorMsg: Message = {
           id: `err-${Date.now()}`,
           sender: 'ai',
-          text: `I ran into an issue finding that answer: ${data.error || 'Please try again.'}`,
+          text: `I ran into an issue finding that answer: ${data?.error || 'Please try again.'}`,
           timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
         };
         setMessages((prev) => [...prev, errorMsg]);
@@ -107,11 +111,15 @@ export const PropertyAiChatbot: React.FC<PropertyAiChatbotProps> = ({
       const errorMsg: Message = {
         id: `err-${Date.now()}`,
         sender: 'ai',
-        text: 'Network error connecting to the AI assistant. Please check your connection.',
+        text:
+          err instanceof DOMException && err.name === 'AbortError'
+            ? 'The AI assistant took too long to respond. Please try again.'
+            : 'Network error connecting to the AI assistant. Please check your connection.',
         timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
       };
       setMessages((prev) => [...prev, errorMsg]);
     } finally {
+      clearTimeout(timeout);
       setLoading(false);
     }
   };
