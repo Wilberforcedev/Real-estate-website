@@ -267,7 +267,7 @@ async function startServer() {
       }
       const responseBody = Buffer.from(await upstream.arrayBuffer());
       return res.status(upstream.status).send(responseBody);
-    } catch (error) {
+    } catch {
       console.warn("[data-api] service unavailable");
       return res.status(503).json({ error: "Shared data is temporarily unavailable." });
     }
