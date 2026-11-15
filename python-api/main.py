@@ -3,6 +3,7 @@ from __future__ import annotations
 import hashlib
 import json
 import os
+from pathlib import Path
 import secrets
 from contextlib import asynccontextmanager
 from datetime import timedelta
@@ -69,6 +70,29 @@ async def lifespan(_app: FastAPI):
             "CREATE INDEX IF NOT EXISTS estatevue_visitor_state_expiry_idx "
             "ON estatevue_visitor_state (expires_at)"
         )
+        await connection.execute(
+            """
+            CREATE TABLE IF NOT EXISTS estatevue_properties (
+                property_id TEXT PRIMARY KEY,
+                payload JSONB NOT NULL,
+                created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+            )
+            """
+        )
+        seed_properties = json.loads(
+            Path(__file__).with_name("seed_properties.json").read_text(encoding="utf-8")
+        )
+        async with connection.transaction():
+            for property_data in seed_properties:
+                await connection.execute(
+                    """
+                    INSERT INTO estatevue_properties (property_id, payload)
+                    VALUES ($1, $2)
+                    ON CONFLICT (property_id) DO NOTHING
+                    """,
+                    property_data["id"],
+                    property_data,
+                )
     yield
     await pool.close()
     pool = None
@@ -170,6 +194,16 @@ async def ready_health():
     async with db.acquire() as connection:
         await connection.fetchval("SELECT 1")
     return {"status": "ok", "database": "connected"}
+
+
+@app.get("/api/properties")
+async def list_properties():
+    db = get_pool()
+    async with db.acquire() as connection:
+        rows = await connection.fetch(
+            "SELECT payload FROM estatevue_properties ORDER BY created_at DESC, property_id"
+        )
+    return {"properties": [row["payload"] for row in rows]}
 
 
 @app.get("/api/state")
