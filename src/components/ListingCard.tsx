@@ -57,10 +57,10 @@ export const ListingCard: React.FC<ListingCardProps> = ({
       onClick={() => onOpenDetailModal(property)}
       onMouseEnter={() => onHover && onHover(property.id)}
       onMouseLeave={() => onHover && onHover(null)}
-      className={`group relative bg-white rounded-2xl overflow-hidden border transition-all duration-300 cursor-pointer ${
+      className={`group relative bg-[#fffefa] rounded-[1.35rem] overflow-hidden border transition-all duration-300 cursor-pointer ${
         isHovered
           ? 'border-[#8A9A5B] shadow-xl ring-2 ring-[#8A9A5B]/20 -translate-y-1'
-          : 'border-[#E8E6E1] shadow-xs hover:shadow-md hover:border-[#8A9A5B]/50'
+          : 'border-[#e5e0d5] shadow-sm hover:shadow-lg hover:border-[#71806A]/50'
       }`}
     >
       {/* Photo Gallery Box */}
@@ -211,7 +211,7 @@ export const ListingCard: React.FC<ListingCardProps> = ({
               e.stopPropagation();
               onQuickScheduleTour(property);
             }}
-            className="bg-[#5C6B4E] hover:bg-[#4A573F] text-white px-3 py-1.5 rounded-xl text-xs font-bold transition-all shadow-xs flex items-center gap-1.5 shrink-0"
+            className="bg-[#26372d] hover:bg-[#35483c] text-white px-3 py-1.5 rounded-xl text-xs font-bold transition-all shadow-xs flex items-center gap-1.5 shrink-0"
           >
             <Calendar className="w-3.5 h-3.5" />
             <span>Schedule Tour</span>
