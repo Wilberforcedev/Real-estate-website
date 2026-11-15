@@ -3,8 +3,8 @@
 @layer base {
   body {
     font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
-    background-color: #FAF9F6;
-    color: #3E3C38;
+    background-color: #F6F4EE;
+    color: #26372D;
   }
 
   h1, h2, h3, .font-serif {
@@ -25,13 +25,13 @@
 }
 
 .custom-price-pin .price-badge {
-  background: #5C6B4E;
+  background: #26372D;
   color: #ffffff;
   padding: 4px 10px;
   border-radius: 9999px;
   font-weight: 700;
   font-size: 12px;
-  box-shadow: 0 4px 12px rgba(92, 107, 78, 0.25);
+  box-shadow: 0 4px 12px rgba(38, 55, 45, 0.24);
   border: 2px solid #ffffff;
   white-space: nowrap;
   transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
@@ -42,11 +42,11 @@
 
 .custom-price-pin.selected .price-badge,
 .custom-price-pin:hover .price-badge {
-  background: #8A9A5B;
+  background: #71806A;
   color: #ffffff;
   transform: scale(1.15) translateY(-2px);
   z-index: 999;
-  box-shadow: 0 8px 20px rgba(138, 154, 91, 0.4);
+  box-shadow: 0 8px 20px rgba(113, 128, 106, 0.38);
   border-color: #ffffff;
 }
 
