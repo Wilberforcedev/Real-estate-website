@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+import asyncio
 import hashlib
+import logging
 import json
 import os
 from pathlib import Path
@@ -23,6 +25,7 @@ COOKIE_SECURE = os.getenv("SESSION_COOKIE_SECURE", "true" if IS_PRODUCTION else 
 SESSION_COOKIE_NAME = "estatevue_session"
 SESSION_MAX_AGE_SECONDS = 60 * 60 * 24 * 30
 MAX_STATE_BYTES = 256 * 1024
+logger = logging.getLogger("estatevue.data_api")
 
 JsonObject = dict[str, Any]
 ShortId = Annotated[str, Field(min_length=1, max_length=128)]
@@ -39,6 +42,19 @@ class UserState(BaseModel):
 
 
 EMPTY_STATE = UserState()
+
+
+async def cleanup_expired_sessions() -> None:
+    while True:
+        try:
+            db = get_pool()
+            async with db.acquire() as connection:
+                await connection.execute(
+                    "DELETE FROM estatevue_visitor_state WHERE expires_at <= NOW()"
+                )
+        except Exception:
+            logger.exception("Session cleanup failed")
+        await asyncio.sleep(60 * 60)
 
 
 @asynccontextmanager
@@ -102,9 +118,17 @@ async def lifespan(_app: FastAPI):
                     property_data["id"],
                     property_data,
                 )
-    yield
-    await pool.close()
-    pool = None
+    cleanup_task = asyncio.create_task(cleanup_expired_sessions())
+    try:
+        yield
+    finally:
+        cleanup_task.cancel()
+        try:
+            await cleanup_task
+        except asyncio.CancelledError:
+            pass
+        await pool.close()
+        pool = None
 
 
 pool: asyncpg.Pool | None = None
