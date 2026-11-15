@@ -64,6 +64,11 @@ For a web-only image, the existing `Dockerfile` still builds the React client an
 | `GEMINI_MODEL` | `gemini-3.6-flash` | Model used by both AI endpoints |
 | `PORT` | `3000` | Express HTTP port |
 | `DATA_API_URL` | `http://127.0.0.1:8000` | Internal FastAPI base URL |
+| `POSTGRES_PASSWORD` | Required | Database password; use a strong secret in deployments |
+| `DB_HOST` / `DB_PORT` | `database` / `5432` in Compose | PostgreSQL connection settings |
+| `DB_NAME` / `DB_USER` | `estatevue` / `estatevue` | PostgreSQL database and role |
+| `APP_ENV` | `development` | Set to `production` to disable Python API docs |
+| `SESSION_COOKIE_SECURE` | `false` in local .env example | Set to `true` behind HTTPS in production |
 | `NODE_ENV` | `development` | `production` enables static serving, logging, CSP and HSTS |
 | `TRUST_PROXY` | `1` in production, `0` in development | Hop count/flag for `X-Forwarded-For`. Keep `0` if directly exposed |
 | `AI_TIMEOUT_MS` | `30000` | Upstream Gemini timeout |
