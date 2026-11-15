@@ -5,7 +5,7 @@ services:
     environment:
       POSTGRES_DB: estatevue
       POSTGRES_USER: estatevue
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-estatevue-local-only}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env before starting Compose}
     volumes:
       - estatevue_pgdata:/var/lib/postgresql/data
     healthcheck:
@@ -20,7 +20,11 @@ services:
       dockerfile: Dockerfile.python
     restart: unless-stopped
     environment:
-      DATABASE_URL: postgresql://estatevue:${POSTGRES_PASSWORD:-estatevue-local-only}@database:5432/estatevue
+      DB_HOST: database
+      DB_PORT: 5432
+      DB_NAME: estatevue
+      DB_USER: estatevue
+      DB_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env before starting Compose}
       APP_ENV: ${APP_ENV:-development}
       SESSION_COOKIE_SECURE: ${SESSION_COOKIE_SECURE:-false}
     depends_on:
