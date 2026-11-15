@@ -13,10 +13,11 @@ import asyncpg
 from fastapi import FastAPI, HTTPException, Request, Response
 from pydantic import BaseModel, ConfigDict, Field
 
-DATABASE_URL = os.getenv(
-    "DATABASE_URL",
-    "postgresql://estatevue:estatevue-local-only@127.0.0.1:5432/estatevue",
-)
+DB_HOST = os.getenv("DB_HOST", "127.0.0.1")
+DB_PORT = int(os.getenv("DB_PORT", "5432"))
+DB_NAME = os.getenv("DB_NAME", "estatevue")
+DB_USER = os.getenv("DB_USER", "estatevue")
+DB_PASSWORD = os.getenv("DB_PASSWORD", "estatevue-local-only")
 IS_PRODUCTION = os.getenv("APP_ENV", "development") == "production"
 COOKIE_SECURE = os.getenv("SESSION_COOKIE_SECURE", "true" if IS_PRODUCTION else "false").lower() in {"1", "true", "yes"}
 SESSION_COOKIE_NAME = "estatevue_session"
@@ -43,7 +44,15 @@ EMPTY_STATE = UserState()
 @asynccontextmanager
 async def lifespan(_app: FastAPI):
     global pool
-    pool = await asyncpg.create_pool(DATABASE_URL, min_size=1, max_size=10)
+    pool = await asyncpg.create_pool(
+        host=DB_HOST,
+        port=DB_PORT,
+        database=DB_NAME,
+        user=DB_USER,
+        password=DB_PASSWORD,
+        min_size=1,
+        max_size=10,
+    )
     await pool.set_type_codec(
         "jsonb",
         encoder=json.dumps,
@@ -116,7 +125,10 @@ async def limit_request_size(request: Request, call_next):
             status_code=413,
             media_type="application/json",
         )
-    return await call_next(request)
+    result = await call_next(request)
+    if request.url.path.startswith("/api/"):
+        result.headers["Cache-Control"] = "no-store"
+    return result
 
 
 def get_pool() -> asyncpg.Pool:
