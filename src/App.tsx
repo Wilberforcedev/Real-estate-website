@@ -40,7 +40,7 @@ const DEFAULT_SAVED_SEARCHES: SavedSearch[] = [
       minPrice: 1500000,
       maxPrice: 5000000
     },
-    emailAlertsEnabled: true,
+    emailAlertsEnabled: false,
     alertFrequency: 'daily',
     userEmail: '',
     createdAt: '2026-08-01'
@@ -145,12 +145,12 @@ export default function App() {
       createdAt: new Date().toISOString()
     };
     setSavedSearches((prev) => [newSearch, ...prev]);
-    showToast(`Saved search "${name}" created! ${enableAlerts ? `Email alerts set to ${frequency}.` : ''} 🔔`);
+    showToast(enableAlerts ? 'Search saved on this device. Email alerts are a demo and are not sent.' : 'Search saved on this device.');
   };
 
   const handleApplySavedSearch = (savedFilters: FilterState) => {
     setFilters(savedFilters);
-    showToast(`Applied saved search criteria! 🔍`);
+    showToast('Saved search criteria applied.');
   };
 
   const handleDeleteSavedSearch = (id: string) => {
@@ -174,7 +174,7 @@ export default function App() {
           : s
       )
     );
-    showToast(`Email alert status updated.`);
+    showToast('Alert preference saved on this device. No email will be sent.');
   };
 
   // Toggle Saved Heart
@@ -197,18 +197,18 @@ export default function App() {
   // Submit Tour Booking
   const handleScheduleTourSubmit = (booking: TourBooking) => {
     setTourBookings((prev) => [booking, ...prev]);
-    showToast(`Tour requested with ${booking.agentName} for ${booking.date} at ${booking.timeSlot}! 📅`);
+    showToast(`Tour request saved on this device for ${booking.date} at ${booking.timeSlot}. It has not been sent to the agent.`);
   };
 
   // Submit Agent Inquiry
   const handleAgentInquirySubmit = (inquiry: AgentInquiry) => {
-    showToast(`Question sent to agent ${inquiry.agentName}! Check your email shortly. 📩`);
+    showToast(`Inquiry preview for ${inquiry.agentName}. No message has been sent.`);
   };
 
   // Add Custom Property
   const handleAddProperty = (newProp: Property) => {
     setProperties((prev) => [newProp, ...prev]);
-    showToast(`Property "${newProp.title}" listed successfully! 🎉`);
+    showToast(`"${newProp.title}" added to this browser's demo collection.`);
   };
 
   // Cancel Tour
@@ -282,11 +282,12 @@ export default function App() {
   }, [properties, savedPropertyIds]);
 
   return (
-    <div className="min-h-screen flex flex-col bg-[#FAF9F6] text-[#3E3C38] font-sans">
-      
+    <div className="min-h-screen flex flex-col bg-[#F6F4EE] text-[#26372D] font-sans">
+      <a href="#property-results" className="sr-only z-50 rounded bg-white px-4 py-3 text-[#26372D] focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:ring-2 focus:ring-[#71806A]">Skip to property listings</a>
+
       {/* Toast Notification Banner */}
       {toastMessage && (
-        <div className="fixed top-20 right-4 z-50 bg-[#3E3C38] text-white px-4 py-3 rounded-2xl shadow-2xl border border-[#8A9A5B]/50 flex items-center gap-3 animate-in fade-in slide-in-from-top-4 duration-200 max-w-md">
+        <div role="status" aria-live="polite" className="fixed top-20 right-4 z-50 bg-[#26372D] text-white px-4 py-3 rounded-2xl shadow-2xl border border-[#71806A]/50 flex items-center gap-3 animate-in fade-in slide-in-from-top-4 duration-200 max-w-md">
           <CheckCircle2 className="w-5 h-5 text-[#8A9A5B] shrink-0" />
           <span className="text-xs font-bold">{toastMessage}</span>
         </div>
@@ -364,6 +365,11 @@ export default function App() {
         onResetFilters={() => setFilters(INITIAL_FILTER_STATE)}
         onOpenSavedSearchesModal={() => setIsSavedSearchesOpen(true)}
       />
+
+      <aside role="note" className="mx-auto flex w-full max-w-7xl items-start gap-2 px-4 py-3 text-xs leading-relaxed text-[#5f6258] sm:px-6 lg:px-8">
+        <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-[#71806A]" />
+        <p><strong className="font-semibold text-[#35483c]">Preview experience.</strong> Listings are examples. Favorites, searches, tour requests, and added properties are saved in this browser; no emails or bookings are sent.</p>
+      </aside>
 
       {/* Main Container View Area */}
       <main id="property-results" className="flex-1 flex flex-col relative overflow-hidden">
