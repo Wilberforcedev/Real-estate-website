@@ -86,7 +86,7 @@ export default function App() {
 
   // Filter State & View Mode
   const [filters, setFilters] = useState<FilterState>(INITIAL_FILTER_STATE);
-  const [viewMode, setViewMode] = useState<'split' | 'grid' | 'map'>('split');
+  const [viewMode, setViewMode] = useState<'split' | 'grid' | 'map'>('grid');
   
   // Modals & Hover States
   const [selectedProperty, setSelectedProperty] = useState<Property | null>(null);
@@ -308,6 +308,52 @@ export default function App() {
         setSearchQuery={(q) => setFilters((prev) => ({ ...prev, searchQuery: q }))}
       />
 
+
+      {/* Editorial hero inspired by the quiet, architectural feel of CDA National */}
+      {viewMode !== 'map' && (
+        <section className="relative isolate min-h-[430px] overflow-hidden bg-[#17251d] sm:min-h-[500px] lg:min-h-[590px]">
+          <img
+            src="https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?auto=format&fit=crop&w=2400&q=85"
+            alt="Modern home framed by its natural landscape"
+            className="absolute inset-0 -z-20 h-full w-full object-cover object-center"
+          />
+          <div className="absolute inset-0 -z-10 bg-gradient-to-r from-[#15221c]/85 via-[#15221c]/48 to-[#15221c]/10" />
+          <div className="absolute inset-0 -z-10 bg-gradient-to-t from-[#15221c]/55 via-transparent to-[#15221c]/10" />
+          <div className="mx-auto flex min-h-[430px] max-w-7xl flex-col justify-end px-5 pb-12 pt-16 sm:min-h-[500px] sm:px-8 sm:pb-16 lg:min-h-[590px] lg:px-12 lg:pb-20">
+            <div className="max-w-3xl">
+              <p className="mb-5 inline-flex items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.25em] text-[#e0d5bd] sm:text-xs">
+                <span className="h-px w-8 bg-[#d6c6a5]" />
+                A more considered way to find home
+              </p>
+              <h1 className="font-serif text-4xl font-medium leading-[1.04] tracking-tight text-white sm:text-6xl lg:text-7xl">
+                Space to live.<br className="hidden sm:block" /> Room to belong.
+              </h1>
+              <p className="mt-5 max-w-xl text-sm leading-7 text-white/80 sm:text-base">
+                Explore distinctive homes, compare the details that matter, and discover a setting that feels unmistakably yours.
+              </p>
+              <div className="mt-8 flex flex-wrap items-center gap-3">
+                <button
+                  onClick={() => document.getElementById('property-results')?.scrollIntoView({ behavior: 'smooth' })}
+                  className="inline-flex items-center gap-3 bg-[#f1eee6] px-5 py-3 text-xs font-semibold uppercase tracking-[0.12em] text-[#24372c] transition hover:bg-white"
+                >
+                  Explore homes <ArrowUpRight className="h-4 w-4" />
+                </button>
+                <button
+                  onClick={() => setViewMode('map')}
+                  className="inline-flex items-center gap-2 border border-white/55 px-5 py-3 text-xs font-semibold uppercase tracking-[0.12em] text-white transition hover:bg-white/10"
+                >
+                  <MapPin className="h-4 w-4" /> Explore the map
+                </button>
+              </div>
+            </div>
+            <div className="mt-12 flex items-center gap-3 text-[10px] font-medium uppercase tracking-[0.18em] text-white/75 sm:mt-16">
+              <span className="h-px w-8 bg-[#d6c6a5]" />
+              Distinctive homes · thoughtful details · places to put down roots
+            </div>
+          </div>
+        </section>
+      )}
+
       {/* Filter Bar */}
       <FilterBar
         filters={filters}
@@ -320,7 +366,7 @@ export default function App() {
       />
 
       {/* Main Container View Area */}
-      <main className="flex-1 flex flex-col relative overflow-hidden">
+      <main id="property-results" className="flex-1 flex flex-col relative overflow-hidden">
         
         {/* VIEW MODE 1: SPLIT MAP + LIST VIEW */}
         {viewMode === 'split' && (
@@ -419,8 +465,9 @@ export default function App() {
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 w-full">
             <div className="flex items-center justify-between mb-6">
               <div>
-                <h2 className="font-serif font-bold text-2xl text-[#3E3C38]">Explore Properties</h2>
-                <p className="text-xs text-[#8C8A85]">Showing {filteredProperties.length} properties matching your criteria</p>
+                <p className="mb-2 text-[10px] font-semibold uppercase tracking-[0.22em] text-[#69765f]">The collection</p>
+                <h2 className="font-serif text-3xl font-medium tracking-tight text-[#27362d] sm:text-4xl">Find your place</h2>
+                <p className="mt-2 text-sm text-[#77766e]">A considered selection of homes, ready to explore.</p>
               </div>
             </div>
 
