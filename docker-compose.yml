@@ -19,6 +19,8 @@ services:
       context: .
       dockerfile: Dockerfile.python
     restart: unless-stopped
+    ports:
+      - "127.0.0.1:8000:8000"
     environment:
       DB_HOST: database
       DB_PORT: 5432
