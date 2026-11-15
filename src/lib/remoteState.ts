@@ -63,3 +63,12 @@ export async function saveRemoteState(state: RemoteState): Promise<void> {
   });
   if (!response.ok) throw new Error(`Data service returned ${response.status}`);
 }
+
+export async function clearRemoteState(): Promise<void> {
+  const response = await fetch('/api/data/state', {
+    method: 'DELETE',
+    credentials: 'same-origin',
+    cache: 'no-store',
+  });
+  if (!response.ok) throw new Error(`Data service returned ${response.status}`);
+}
