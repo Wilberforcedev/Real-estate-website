@@ -31,20 +31,20 @@ export const Navbar: React.FC<NavbarProps> = ({
   setSearchQuery
 }) => {
   return (
-    <header className="sticky top-0 z-40 bg-white border-b border-[#E8E6E1] text-[#3E3C38] shadow-xs">
+    <header className="sticky top-0 z-40 border-b border-[#e5e0d5] bg-[#faf9f6]/95 text-[#26372d] shadow-none backdrop-blur-xl">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between h-16 gap-4">
+        <div className="flex items-center justify-between h-[72px] gap-4">
           {/* Brand Logo */}
           <div className="flex items-center gap-3 shrink-0 cursor-pointer">
-            <div className="w-10 h-10 rounded-xl bg-[#5C6B4E] flex items-center justify-center text-white shadow-sm ring-2 ring-[#5C6B4E]/20">
+            <div className="w-10 h-10 rounded-xl bg-[#26372d] flex items-center justify-center text-white shadow-sm ring-2 ring-[#26372d]/15">
               <Building2 className="w-5 h-5" />
             </div>
             <div>
               <div className="flex items-center gap-1.5">
-                <span className="font-serif text-xl font-bold tracking-tight text-[#5C6B4E]">EstateVue</span>
-                <span className="text-[10px] font-semibold bg-[#8A9A5B]/15 text-[#5C6B4E] px-1.5 py-0.5 rounded border border-[#8A9A5B]/30 uppercase tracking-wider">Natural</span>
+                <span className="font-serif text-xl font-bold tracking-tight text-[#26372d]">EstateVue</span>
+                <span className="text-[10px] font-semibold bg-[#8A9A5B]/15 text-[#5C6B4E] px-1.5 py-0.5 rounded border border-[#8A9A5B]/30 uppercase tracking-wider">Homes</span>
               </div>
-              <p className="text-[10px] text-[#8C8A85] font-medium hidden sm:block">Earth-Conscious Homes & Verified Listings</p>
+              <p className="text-[10px] text-[#8C8A85] font-medium hidden sm:block">Thoughtfully found homes</p>
             </div>
           </div>
 
@@ -56,7 +56,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                 onClick={() => setListingType('sale')}
                 className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
                   listingType === 'sale'
-                    ? 'bg-[#5C6B4E] text-white shadow-xs'
+                    ? 'bg-[#26372d] text-white shadow-xs'
                     : 'text-[#8C8A85] hover:text-[#3E3C38] hover:bg-white/60'
                 }`}
               >
@@ -165,7 +165,7 @@ export const Navbar: React.FC<NavbarProps> = ({
             {/* List Property CTA */}
             <button
               onClick={onOpenAddListingModal}
-              className="bg-[#5C6B4E] hover:bg-[#4A573F] text-white px-3.5 py-2 rounded-xl text-xs font-semibold shadow-xs flex items-center gap-1.5 transition-all hover:scale-[1.02] active:scale-[0.98]"
+              className="bg-[#26372d] hover:bg-[#35483c] text-white px-3.5 py-2 rounded-xl text-xs font-semibold shadow-xs flex items-center gap-1.5 transition-all hover:scale-[1.02] active:scale-[0.98]"
             >
               <PlusCircle className="w-4 h-4" />
               <span className="hidden md:inline">List Property</span>
