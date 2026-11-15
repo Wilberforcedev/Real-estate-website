@@ -35,7 +35,7 @@ export const Navbar: React.FC<NavbarProps> = ({
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-[72px] gap-4">
           {/* Brand Logo */}
-          <div className="flex items-center gap-3 shrink-0 cursor-pointer">
+          <div className="flex items-center gap-3 shrink-0">
             <div className="w-10 h-10 rounded-xl bg-[#26372d] flex items-center justify-center text-white shadow-sm ring-2 ring-[#26372d]/15">
               <Building2 className="w-5 h-5" />
             </div>
@@ -89,6 +89,7 @@ export const Navbar: React.FC<NavbarProps> = ({
               <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-[#8C8A85]" />
               <input
                 type="text"
+                aria-label="Search by city, neighborhood, or ZIP code"
                 placeholder="City, neighborhood, or zip..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
