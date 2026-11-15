@@ -7,6 +7,7 @@ const NODE_ENV =
   process.env.NODE_ENV ?? (process.env.npm_lifecycle_event === "start" ? "production" : "development");
 const IS_PRODUCTION = NODE_ENV === "production";
 const PORT = Number(process.env.PORT) || 3000;
+const DATA_API_URL = process.env.DATA_API_URL || "http://127.0.0.1:8000";
 const GEMINI_MODEL = process.env.GEMINI_MODEL || "gemini-3.6-flash";
 const AI_TIMEOUT_MS = Number(process.env.AI_TIMEOUT_MS) || 30000;
 const AI_RATE_LIMIT = Number(process.env.AI_RATE_LIMIT) || 20;
@@ -244,7 +245,33 @@ async function startServer() {
   }
 
   app.use("/api", createRateLimiter(API_RATE_LIMIT, API_RATE_WINDOW_MS, "api"));
-  app.use(express.json({ limit: "64kb" }));
+  app.use(express.json({ limit: "256kb" }));
+
+  app.use("/api/data", async (req, res) => {
+    try {
+      const upstreamPath = req.originalUrl.replace(/^\/api\/data(?=\/|$)/, "/api");
+      const requestHeaders: Record<string, string> = {};
+      if (req.headers.cookie) requestHeaders.cookie = req.headers.cookie;
+      const hasBody = !["GET", "HEAD"].includes(req.method);
+      if (hasBody) requestHeaders["content-type"] = "application/json";
+
+      const upstream = await fetch(new URL(upstreamPath, DATA_API_URL), {
+        method: req.method,
+        headers: requestHeaders,
+        ...(hasBody ? { body: JSON.stringify(req.body ?? {}) } : {}),
+      });
+
+      for (const headerName of ["content-type", "cache-control", "set-cookie", "retry-after"]) {
+        const headerValue = upstream.headers.get(headerName);
+        if (headerValue) res.setHeader(headerName, headerValue);
+      }
+      const responseBody = Buffer.from(await upstream.arrayBuffer());
+      return res.status(upstream.status).send(responseBody);
+    } catch (error) {
+      console.warn("[data-api] service unavailable");
+      return res.status(503).json({ error: "Shared data is temporarily unavailable." });
+    }
+  });
 
   app.get("/api/health", (_req, res) => {
     res.setHeader("Cache-Control", "no-store");
