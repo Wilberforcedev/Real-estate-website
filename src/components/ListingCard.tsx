@@ -53,11 +53,10 @@ export const ListingCard: React.FC<ListingCardProps> = ({
     : `$${property.price.toLocaleString()}`;
 
   return (
-    <div
-      onClick={() => onOpenDetailModal(property)}
+    <article
       onMouseEnter={() => onHover && onHover(property.id)}
       onMouseLeave={() => onHover && onHover(null)}
-      className={`group relative bg-[#fffefa] rounded-[1.35rem] overflow-hidden border transition-all duration-300 cursor-pointer ${
+      className={`group relative bg-[#fffefa] rounded-[1.35rem] overflow-hidden border transition-all duration-300 ${
         isHovered
           ? 'border-[#8A9A5B] shadow-xl ring-2 ring-[#8A9A5B]/20 -translate-y-1'
           : 'border-[#e5e0d5] shadow-sm hover:shadow-lg hover:border-[#71806A]/50'
@@ -68,6 +67,8 @@ export const ListingCard: React.FC<ListingCardProps> = ({
         <img
           src={property.images[currentImageIndex] || property.images[0]}
           alt={property.title}
+          loading="lazy"
+          decoding="async"
           className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
         />
 
@@ -110,6 +111,8 @@ export const ListingCard: React.FC<ListingCardProps> = ({
               ? 'bg-white text-[#D98E73] shadow-md scale-110'
               : 'bg-[#3E3C38]/50 hover:bg-[#3E3C38]/80 text-white hover:text-[#D98E73]'
           }`}
+          type="button"
+          aria-label={isFavorite ? `Remove ${property.title} from saved homes` : `Save ${property.title}`}
           title={isFavorite ? 'Remove from Saved' : 'Save Property'}
         >
           <Heart className={`w-4 h-4 ${isFavorite ? 'fill-[#D98E73]' : ''}`} />
@@ -119,12 +122,16 @@ export const ListingCard: React.FC<ListingCardProps> = ({
         {property.images.length > 1 && (
           <>
             <button
+              type="button"
+              aria-label={`Previous photo of ${property.title}`}
               onClick={prevImage}
               className="absolute left-2 top-1/2 -translate-y-1/2 p-1.5 rounded-full bg-[#3E3C38]/50 hover:bg-[#3E3C38]/80 text-white opacity-0 group-hover:opacity-100 transition-all z-10"
             >
               <ChevronLeft className="w-4 h-4" />
             </button>
             <button
+              type="button"
+              aria-label={`Next photo of ${property.title}`}
               onClick={nextImage}
               className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 rounded-full bg-[#3E3C38]/50 hover:bg-[#3E3C38]/80 text-white opacity-0 group-hover:opacity-100 transition-all z-10"
             >
@@ -166,8 +173,17 @@ export const ListingCard: React.FC<ListingCardProps> = ({
             <span className="text-[#8C8A85] font-normal">Built {property.yearBuilt}</span>
           </div>
 
-          <h3 className="font-serif font-bold text-[#3E3C38] text-base leading-snug line-clamp-1 group-hover:text-[#5C6B4E] transition-colors">
-            {property.title}
+          <h3 className="font-serif font-bold text-[#3E3C38] text-base leading-snug line-clamp-1">
+            <button
+              type="button"
+              onClick={() => {
+                onSelectProperty(property);
+                onOpenDetailModal(property);
+              }}
+              className="text-left transition-colors hover:text-[#5C6B4E] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#71806A]"
+            >
+              {property.title}
+            </button>
           </h3>
 
           <div className="flex items-center gap-1 text-[#8C8A85] text-xs mt-1">
@@ -207,10 +223,8 @@ export const ListingCard: React.FC<ListingCardProps> = ({
           </div>
 
           <button
-            onClick={(e) => {
-              e.stopPropagation();
-              onQuickScheduleTour(property);
-            }}
+            type="button"
+            onClick={() => onQuickScheduleTour(property)}
             className="bg-[#26372d] hover:bg-[#35483c] text-white px-3 py-1.5 rounded-xl text-xs font-bold transition-all shadow-xs flex items-center gap-1.5 shrink-0"
           >
             <Calendar className="w-3.5 h-3.5" />
@@ -218,6 +232,6 @@ export const ListingCard: React.FC<ListingCardProps> = ({
           </button>
         </div>
       </div>
-    </div>
+    </article>
   );
 };
