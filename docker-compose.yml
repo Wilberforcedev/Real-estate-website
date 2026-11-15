@@ -1,0 +1,53 @@
+services:
+  database:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: estatevue
+      POSTGRES_USER: estatevue
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-estatevue-local-only}
+    volumes:
+      - estatevue_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U estatevue -d estatevue"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+
+  data-api:
+    build:
+      context: .
+      dockerfile: Dockerfile.python
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: postgresql://estatevue:${POSTGRES_PASSWORD:-estatevue-local-only}@database:5432/estatevue
+      APP_ENV: ${APP_ENV:-development}
+      SESSION_COOKIE_SECURE: ${SESSION_COOKIE_SECURE:-false}
+    depends_on:
+      database:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health/ready', timeout=3)"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    ports:
+      - "${PORT:-3000}:3000"
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      DATA_API_URL: http://data-api:8000
+      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+      TRUST_PROXY: ${TRUST_PROXY:-0}
+    depends_on:
+      data-api:
+        condition: service_healthy
+
+volumes:
+  estatevue_pgdata:
