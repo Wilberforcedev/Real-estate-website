@@ -1,6 +1,11 @@
 @import "tailwindcss";
 
 @layer base {
+  :focus-visible {
+    outline: 3px solid #71806A;
+    outline-offset: 3px;
+  }
+
   body {
     font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
     background-color: #F6F4EE;
