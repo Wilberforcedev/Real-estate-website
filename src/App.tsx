@@ -12,7 +12,7 @@ import { SavedSearchesModal } from './components/SavedSearchesModal';
 import { MortgageCalculatorModal } from './components/MortgageCalculatorModal';
 import { Property, FilterState, TourBooking, AgentInquiry, SavedSearch } from './types';
 import { INITIAL_PROPERTIES } from './data/mockProperties';
-import { loadRemoteProperties, loadRemoteState, saveRemoteState } from './lib/remoteState';
+import { clearRemoteState, loadRemoteProperties, loadRemoteState, saveRemoteState } from './lib/remoteState';
 import { Sparkles, Building2, MapPin, CheckCircle2, AlertCircle, ArrowUpRight, ShieldCheck } from 'lucide-react';
 
 const INITIAL_FILTER_STATE: FilterState = {
@@ -56,14 +56,6 @@ function readStoredArray<T>(key: string, fallback: T[]): T[] {
     return Array.isArray(parsed) ? (parsed as T[]) : fallback;
   } catch {
     return fallback;
-  }
-}
-
-function persist(key: string, value: unknown) {
-  try {
-    localStorage.setItem(key, JSON.stringify(value));
-  } catch {
-    // Storage can be unavailable (private mode, quota); the app keeps working in memory.
   }
 }
 
@@ -209,7 +201,7 @@ export default function App() {
       createdAt: new Date().toISOString()
     };
     setSavedSearches((prev) => [newSearch, ...prev]);
-    showToast(enableAlerts ? 'Search saved on this device. Email alerts are a demo and are not sent.' : 'Search saved on this device.');
+    showToast(enableAlerts ? 'Saved search added. Email alerts are not sent in this preview.' : 'Saved search added.');
   };
 
   const handleApplySavedSearch = (savedFilters: FilterState) => {
@@ -238,7 +230,7 @@ export default function App() {
           : s
       )
     );
-    showToast('Alert preference saved on this device. No email will be sent.');
+    showToast('Alert preference updated. No email is sent in this preview.');
   };
 
   // Toggle Saved Heart
@@ -261,7 +253,7 @@ export default function App() {
   // Submit Tour Booking
   const handleScheduleTourSubmit = (booking: TourBooking) => {
     setTourBookings((prev) => [booking, ...prev]);
-    showToast(`Tour request saved on this device for ${booking.date} at ${booking.timeSlot}. It has not been sent to the agent.`);
+    showToast(`Tour request captured for ${booking.date} at ${booking.timeSlot}. No booking is made in this preview.`);
   };
 
   // Submit Agent Inquiry
@@ -273,13 +265,30 @@ export default function App() {
   // Add Custom Property
   const handleAddProperty = (newProp: Property) => {
     setProperties((prev) => [newProp, ...prev]);
-    showToast(`"${newProp.title}" added to this browser's demo collection.`);
+    showToast(`"${newProp.title}" added to your demo collection.`);
   };
 
   // Cancel Tour
   const handleCancelTour = (tourId: string) => {
     setTourBookings((prev) => prev.filter((t) => t.id !== tourId));
-    showToast('Tour booking cancelled.');
+    showToast('Tour request removed from your saved data.');
+  };
+
+  const handleClearRemoteData = async () => {
+    if (!window.confirm('Clear your saved homes, searches, tour requests, inquiries, and added demo listings?')) return;
+    try {
+      await clearRemoteState();
+      setSavedPropertyIds([]);
+      setSavedSearches([]);
+      setTourBookings([]);
+      setAgentInquiries([]);
+      setProperties(INITIAL_PROPERTIES);
+      setDataSyncStatus('synced');
+      showToast('Your saved demo data has been cleared.');
+    } catch {
+      setDataSyncStatus('offline');
+      showToast('Could not clear saved data while the data service is offline.');
+    }
   };
 
   // Filter & Sort Logic
@@ -431,9 +440,14 @@ export default function App() {
         onOpenSavedSearchesModal={() => setIsSavedSearchesOpen(true)}
       />
 
-      <aside role="note" className="mx-auto flex w-full max-w-7xl items-start gap-2 px-4 py-3 text-xs leading-relaxed text-[#5f6258] sm:px-6 lg:px-8">
-        <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-[#71806A]" />
-        <p><strong className="font-semibold text-[#35483c]">Preview experience.</strong> Listings are examples. Favorites, searches, tour requests, inquiries, and added properties sync to shared storage for this browser when connected. {dataSyncStatus === 'synced' ? 'Synced.' : dataSyncStatus === 'syncing' ? 'Syncing…' : 'The data service is offline; recent changes may not be saved.'} No emails or bookings are sent.</p>
+      <aside role="note" className="mx-auto flex w-full max-w-7xl flex-col items-start justify-between gap-2 px-4 py-3 text-xs leading-relaxed text-[#5f6258] sm:flex-row sm:items-center sm:px-6 lg:px-8">
+        <div className="flex items-start gap-2">
+          <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-[#71806A]" />
+          <p><strong className="font-semibold text-[#35483c]">Preview experience.</strong> Listings are examples. Favorites, searches, tour requests, inquiries, and added properties sync to shared storage for this browser when connected. {dataSyncStatus === 'synced' ? 'Synced.' : dataSyncStatus === 'syncing' ? 'Syncing…' : 'The data service is offline; recent changes may not be saved.'} Sessions expire after 30 days of inactivity. No emails or bookings are sent.</p>
+        </div>
+        <button type="button" onClick={handleClearRemoteData} className="shrink-0 font-semibold text-[#35483c] underline underline-offset-2 hover:text-[#71806A] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#71806A]">
+          Clear my saved data
+        </button>
       </aside>
 
       {/* Main Container View Area */}
