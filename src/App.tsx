@@ -12,6 +12,7 @@ import { SavedSearchesModal } from './components/SavedSearchesModal';
 import { MortgageCalculatorModal } from './components/MortgageCalculatorModal';
 import { Property, FilterState, TourBooking, AgentInquiry, SavedSearch } from './types';
 import { INITIAL_PROPERTIES } from './data/mockProperties';
+import { loadRemoteProperties, loadRemoteState, saveRemoteState } from './lib/remoteState';
 import { Sparkles, Building2, MapPin, CheckCircle2, AlertCircle, ArrowUpRight, ShieldCheck } from 'lucide-react';
 
 const INITIAL_FILTER_STATE: FilterState = {
@@ -84,6 +85,12 @@ export default function App() {
     readStoredArray<SavedSearch>('estatevue_saved_searches', DEFAULT_SAVED_SEARCHES)
   );
 
+  const [agentInquiries, setAgentInquiries] = useState<AgentInquiry[]>(() =>
+    readStoredArray<AgentInquiry>('estatevue_agent_inquiries', [])
+  );
+  const [remoteStateReady, setRemoteStateReady] = useState(false);
+  const [dataSyncStatus, setDataSyncStatus] = useState<'syncing' | 'synced' | 'offline'>('syncing');
+
   // Filter State & View Mode
   const [filters, setFilters] = useState<FilterState>(INITIAL_FILTER_STATE);
   const [viewMode, setViewMode] = useState<'split' | 'grid' | 'map'>('grid');
@@ -103,22 +110,79 @@ export default function App() {
   // Toast Banner State
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
-  // Sync to LocalStorage
+  // Load the shared catalog and this browser's anonymous server-side state.
   useEffect(() => {
-    persist('estatevue_properties', properties);
-  }, [properties]);
+    let active = true;
+    Promise.all([loadRemoteProperties(), loadRemoteState()])
+      .then(([catalog, remote]) => {
+        if (!active) return;
 
-  useEffect(() => {
-    persist('estatevue_saved_ids', savedPropertyIds);
-  }, [savedPropertyIds]);
+        const initialIds = new Set(INITIAL_PROPERTIES.map((property) => property.id));
+        const cachedProperties = readStoredArray<Property>('estatevue_properties', INITIAL_PROPERTIES);
+        const state = remote.isNewSession
+          ? {
+              savedPropertyIds: readStoredArray<string>('estatevue_saved_ids', ['prop-1', 'prop-3']),
+              savedSearches: readStoredArray<SavedSearch>('estatevue_saved_searches', DEFAULT_SAVED_SEARCHES),
+              tourBookings: readStoredArray<TourBooking>('estatevue_tour_bookings', []),
+              agentInquiries: readStoredArray<AgentInquiry>('estatevue_agent_inquiries', []),
+              customProperties: cachedProperties.filter((property) => !initialIds.has(property.id)),
+            }
+          : remote.state;
 
-  useEffect(() => {
-    persist('estatevue_tour_bookings', tourBookings);
-  }, [tourBookings]);
+        setProperties([...catalog, ...state.customProperties]);
+        setSavedPropertyIds(state.savedPropertyIds);
+        setSavedSearches(state.savedSearches);
+        setTourBookings(state.tourBookings);
+        setAgentInquiries(state.agentInquiries);
+        setDataSyncStatus('syncing');
+        setRemoteStateReady(true);
+      })
+      .catch(() => {
+        if (!active) return;
+        setDataSyncStatus('offline');
+        setRemoteStateReady(true);
+      });
 
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  // Debounce server writes so one interaction saves a complete state snapshot.
   useEffect(() => {
-    persist('estatevue_saved_searches', savedSearches);
-  }, [savedSearches]);
+    if (!remoteStateReady) return;
+
+    const initialIds = new Set(INITIAL_PROPERTIES.map((property) => property.id));
+    const snapshot = {
+      savedPropertyIds,
+      savedSearches,
+      tourBookings,
+      agentInquiries,
+      customProperties: properties.filter((property) => !initialIds.has(property.id)),
+    };
+
+    setDataSyncStatus('syncing');
+    const timer = window.setTimeout(() => {
+      saveRemoteState(snapshot)
+        .then(() => {
+          setDataSyncStatus('synced');
+          try {
+            [
+              'estatevue_properties',
+              'estatevue_saved_ids',
+              'estatevue_tour_bookings',
+              'estatevue_saved_searches',
+              'estatevue_agent_inquiries',
+            ].forEach((key) => localStorage.removeItem(key));
+          } catch {
+            // Storage may be unavailable; server state remains authoritative.
+          }
+        })
+        .catch(() => setDataSyncStatus('offline'));
+    }, 400);
+
+    return () => window.clearTimeout(timer);
+  }, [remoteStateReady, properties, savedPropertyIds, savedSearches, tourBookings, agentInquiries]);
 
   // Show Toast
   const showToast = (msg: string) => {
@@ -202,6 +266,7 @@ export default function App() {
 
   // Submit Agent Inquiry
   const handleAgentInquirySubmit = (inquiry: AgentInquiry) => {
+    setAgentInquiries((prev) => [inquiry, ...prev]);
     showToast(`Inquiry preview for ${inquiry.agentName}. No message has been sent.`);
   };
 
@@ -368,7 +433,7 @@ export default function App() {
 
       <aside role="note" className="mx-auto flex w-full max-w-7xl items-start gap-2 px-4 py-3 text-xs leading-relaxed text-[#5f6258] sm:px-6 lg:px-8">
         <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-[#71806A]" />
-        <p><strong className="font-semibold text-[#35483c]">Preview experience.</strong> Listings are examples. Favorites, searches, tour requests, and added properties are saved in this browser; no emails or bookings are sent.</p>
+        <p><strong className="font-semibold text-[#35483c]">Preview experience.</strong> Listings are examples. Favorites, searches, tour requests, inquiries, and added properties sync to shared storage for this browser when connected. {dataSyncStatus === 'synced' ? 'Synced.' : dataSyncStatus === 'syncing' ? 'Syncing…' : 'The data service is offline; recent changes may not be saved.'} No emails or bookings are sent.</p>
       </aside>
 
       {/* Main Container View Area */}
